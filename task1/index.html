@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Dog Gallery</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        #dogGallery {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        #dogGallery img {
+            width: 200px;
+            height: 200px;
+            object-fit: cover;
+            margin: 5px;
+        }
+
+        #fullscreenButton {
+            margin: 10px;
+        }
+
+        #timer {
+            position: fixed;
+            top: 10px;
+            left: 300px;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+
+        #location {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <button id="getDogPics">Показати фото собаки</button>
+    <button id="fullscreenButton">Fullscreen View</button>
+    <div id="dogGallery"></div>
+    <div id="timer">Час на сторінці: <span id="time">00:00:00</span></div>
+    <div id="location">Місцезнаходження: <span id="coordinates">...</span></div>
+
+    <script>
+        const getDogPicsButton = document.getElementById('getDogPics');
+        const fullscreenButton = document.getElementById('fullscreenButton');
+        const dogGallery = document.getElementById('dogGallery');
+        const timerElement = document.getElementById('timer');
+        const timeSpan = document.getElementById('time');
+        const locationSpan = document.getElementById('coordinates');
+        let isFullscreen = false;
+        let timer;
+        let totalSeconds = 0;
+
+        // Функція для оновлення таймера
+        function updateTime() {
+            ++totalSeconds;
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds - hours * 3600) / 60);
+            const seconds = totalSeconds - hours * 3600 - minutes * 60;
+
+            const formattedTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            timeSpan.textContent = formattedTime;
+        }
+
+        function showPosition(position) {
+            const latitude = position.coords.latitude.toFixed(6);
+            const longitude = position.coords.longitude.toFixed(6);
+            locationSpan.textContent = `${latitude}, ${longitude}`;
+        }
+
+        function showError(error) {
+            locationSpan.textContent = 'Неможливо отримати місцезнаходження';
+            console.error('Помилка геолокації:', error);
+        }
+
+        function getLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(showPosition, showError);
+            } else {
+                locationSpan.textContent = 'Геолокація не підтримується вашим браузером';
+            }
+        }
+
+        getDogPicsButton.addEventListener('click', function () {
+            fetch('https://dog.ceo/api/breeds/image/random/10')
+                .then(response => response.json())
+                .then(data => {
+                    dogGallery.innerHTML = '';
+                    data.message.forEach(imgUrl => {
+                        const img = document.createElement('img');
+                        img.src = imgUrl;
+                        dogGallery.appendChild(img);
+                    });
+                    localStorage.setItem('dogGallery', dogGallery.innerHTML);
+                })
+                .catch(error => {
+                    console.error('Помилка отримання фото собак:', error);
+                });
+        });
+
+        fullscreenButton.addEventListener('click', function () {
+            const gallery = document.documentElement;
+            if (!isFullscreen) {
+                if (gallery.requestFullscreen) {
+                    gallery.requestFullscreen();
+                } else if (gallery.mozRequestFullScreen) {
+                    gallery.mozRequestFullScreen();
+                } else if (gallery.webkitRequestFullscreen) {
+                    gallery.webkitRequestFullscreen();
+                } else if (gallery.msRequestFullscreen) {
+                    gallery.msRequestFullscreen();
+                }
+
+                gallery.style.backgroundColor = '#333';
+                isFullscreen = true;
+                fullscreenButton.textContent = 'Exit Fullscreen';
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.mozCancelFullScreen) {
+                    document.mozCancelFullScreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
+
+                gallery.style.backgroundColor = '';
+                isFullscreen = false;
+                fullscreenButton.textContent = 'Fullscreen View';
+            }
+        });
+
+        function startTimer() {
+            timer = setInterval(updateTime, 1000);
+        }
+
+        function pauseTimer() {
+            clearInterval(timer);
+        }
+
+        document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState === 'visible') {
+                startTimer();
+            } else {
+                pauseTimer();
+            }
+        });
+
+        window.addEventListener('load', function () {
+            startTimer();
+            getLocation();
+        });
+
+        const savedGallery = localStorage.getItem('dogGallery');
+        if (savedGallery) {
+            dogGallery.innerHTML = savedGallery;
+        }
+    </script>
+</body>
+
+</html>
